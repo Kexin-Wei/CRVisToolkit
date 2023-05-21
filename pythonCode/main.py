@@ -10,8 +10,9 @@ def test_robot_independent_mapping():
     pts_per_seg = 30
 
     g = robot_independent_mapping(kappa, phi, ell, pts_per_seg)
-    print("done")
+    return g
 
 
 if __name__ == "__main__":
-    test_robot_independent_mapping()
+    g = test_robot_independent_mapping()
+    print("done")
