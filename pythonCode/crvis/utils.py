@@ -1,19 +1,20 @@
-from .class_define import *
 import numpy as np
 
+from .class_define import *
 
-def listToNumpy(aList: LIST_OR_NUMPY) -> np.ndarray:
+
+def list_to_numpy(a_list: LIST_OR_NUMPY) -> np.ndarray:
     """
     Convert a list to numpy array.
     """
-    return np.array(aList)
+    return np.array(a_list)
 
 
 def robot_independent_mapping(
-    kappa: LIST_OR_NUMPY,
-    phi: LIST_OR_NUMPY,
-    ell: LIST_OR_NUMPY,
-    ptsperseg: LIST_OR_NUMPY_OR_INT,
+        kappa: LIST_OR_NUMPY,
+        phi: LIST_OR_NUMPY,
+        ell: LIST_OR_NUMPY,
+        ptsperseg: LIST_OR_NUMPY_OR_INT,
 ):
     """
     creates a framed curve for given configuration parameters
@@ -32,13 +33,13 @@ def robot_independent_mapping(
       OUTPUT: backbone curve
           g (n,16): backbone curve with n 4x4 transformation matrices reshaped into 1x16 vector (columnwise)
     """
-    kappa = listToNumpy(kappa)
-    phi = listToNumpy(phi)
-    ell = listToNumpy(ell)
+    kappa = list_to_numpy(kappa)
+    phi = list_to_numpy(phi)
+    ell = list_to_numpy(ell)
     ptsperseg = (
-        listToNumpy([ptsperseg]).astype(np.uint8)
+        list_to_numpy([ptsperseg]).astype(np.uint8)
         if isinstance(ptsperseg, int)
-        else listToNumpy(ptsperseg).astype(np.uint8)
+        else list_to_numpy(ptsperseg).astype(np.uint8)
     )
     assert kappa.ndim == 1 and phi.ndim == 1 and ell.ndim == 1 and ptsperseg.ndim == 1, (
         "Input must be 1D array or " "1D list."
@@ -99,7 +100,7 @@ def robot_independent_mapping(
                 ]
             T[j, :] = np.reshape(np.matmul(T_base, np.reshape(T_temp, (4, 4))), (1, 16))
         if i == 0:
-            g[0 : ptsperseg[i], :] = T
+            g[0: ptsperseg[i], :] = T
         else:
             ts = ptsperseg[0:i].sum()
             g[np.arange(ts, ts + ptsperseg[i], dtype=int), :] = T
