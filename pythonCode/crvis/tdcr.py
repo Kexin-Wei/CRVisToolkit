@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
 from .class_define import *
 from .utils import list_to_numpy
@@ -56,7 +57,8 @@ def draw_tdcr(
             raise ValueError('Unknown option: ' + k)
     assert g.shape[1] == 16, "The dimension of g is wrong, should be (n,16)"
     assert seg_end.ndim == 1, "Make sure seg_end is a one dimension vector"
-    assert g.shape[0] >= seg_end.size and g.shape[0] >= np.max(seg_end), "g and seg_end dimension mismatch"
+    assert g.shape[0] >= seg_end.size and g.shape[0] >= np.max(
+        seg_end), "g and seg_end dimension mismatch"
     numseg = seg_end.size
     curvelength = np.linalg.norm(g[1:, 12:14] - g[0:-1, 12:14]).sum()
 
@@ -64,8 +66,10 @@ def draw_tdcr(
     fig = plt.figure(figsize=(12, 10))  # change from 1280, 1024
     clearance = 0.03
     ax = fig.add_subplot(111, projection='3d')
-    ax.set_xlim(left=-g[:, 12].abs().max() - clearance, right=g[:, 12].abs().max() + clearance)
-    ax.set_ylim(left=-g[:, 13].abs().max() - clearance, right=g[:, 13].abs().max() + clearance)
+    ax.set_xlim(left=-g[:, 12].abs().max() - clearance,
+                right=g[:, 12].abs().max() + clearance)
+    ax.set_ylim(left=-g[:, 13].abs().max() - clearance,
+                right=g[:, 13].abs().max() + clearance)
     ax.set_zlim(left=0, right=curvelength + clearance)
     ax.set_xlabel('x (m)')
     ax.set_ylabel('y (m)')
@@ -79,16 +83,20 @@ def draw_tdcr(
     col = np.linspace(0.2, 0.8, numseg)
 
     # backbone
-    ax.plot(g[:seg_end[0], 12], g[:seg_end[0], 13], g[:seg_end[0], 14], color=np.full((1, 3), col[0]), linewidth=5)
+    ax.plot(g[:seg_end[0], 12], g[:seg_end[0], 13],
+            g[:seg_end[0], 14], color=np.full((1, 3), col[0]), linewidth=5)
     for i in range(1, numseg):
         ax.plot(g[seg_end[i - 1]:seg_end[i], 12], g[seg_end[i - 1]:seg_end[i], 13], g[seg_end[i - 1]:seg_end[i], 14],
                 color=col[i] * np.ones((1, 3)), linewidth=5)
 
     # projections
     if projections:
-        ax.plot(g[:, 12], np.full(g.shape[0], ax.get_ylim()[0], g[:, 14]), color=[0, 1, 0], linewidth=2)
-        ax.plot(np.full(g.shape[0], ax.get_xlim()[0], g[:, 13], g[:, 14]), color=[1, 0, 0], linewidth=2)
-        ax.plot(g[:, 12], g[:, 13], np.zeros(g.shape[0]), color=[0, 1, 0], linewidth=2)
+        ax.plot(g[:, 12], np.full(g.shape[0], ax.get_ylim()[
+            0], g[:, 14]), color=[0, 1, 0], linewidth=2)
+        ax.plot(np.full(g.shape[0], ax.get_xlim()[
+            0], g[:, 13], g[:, 14]), color=[1, 0, 0], linewidth=2)
+        ax.plot(g[:, 12], g[:, 13], np.zeros(
+            g.shape[0]), color=[0, 1, 0], linewidth=2)
 
     # tendons
     tendon1 = np.zeros((seg_end[numseg - 1], 3))
@@ -96,3 +104,55 @@ def draw_tdcr(
     tendon3 = tendon1.copy()
 
     # tendon locations on disk
+    r1 = np.array([0, r_disk, 0])
+    r2 = np.array([np.cos(30 * np.pi / 180) * r_disk, -
+                  np.sin(30 * np.pi / 180) * r_disk, 0])
+    r3 = np.array([-np.cos(30 * np.pi / 180) * r_disk, -
+                  np.sin(30 * np.pi / 180) * r_disk, 0])
+
+    for i in range(0, seg_end[numseg]):
+        RotMat = np.reshape(np.array(g[i, 0:3], g[i, 4:7], g[i, 8:11]), (3, 3))
+        tendon1[i, :] = RotMat @ r1.T + g[i, 12:15]
+        tendon2[i, :] = RotMat @ r2.T + g[i, 12:15]
+        tendon3[i, :] = RotMat @ r3.T + g[i, 12:15]
+
+    ax.plot(tendon1[:, 1], tendon1[:, 2], tendon1[:, 3], color=[0, 0, 0])
+    ax.plot(tendon2[:, 1], tendon2[:, 2], tendon2[:, 3], color=[0, 0, 0])
+    ax.plot(tendon3[:, 1], tendon3[:, 2], tendon3[:, 3], color=[0, 0, 0])
+
+    # draw spheres to represent tendon location at end disks
+    x, y, z = sphere()
+    radius = 0.75e-3
+    for i in range(0, numseg):
+        ax.plot_surface(radius * x + tendon1[seg_end[i], 1],
+                        radius * y + tendon1[seg_end[i], 2],
+                        radius * z + tendon1[seg_end[i], 3], color=[0, 0, 0])
+        ax.plot_surface(radius * x + tendon2[seg_end[i], 1],
+                        radius * y + tendon2[seg_end[i], 2],
+                        radius * z + tendon2[seg_end[i], 3], color=[0, 0, 0])
+        ax.plot_surface(radius * x + tendon3[seg_end[i], 1],
+                        radius * y + tendon3[seg_end[i], 2],
+                        radius * z + tendon3[seg_end[i], 3], color=[0, 0, 0])
+
+    # spacer disks
+    for i in range(0, g.shape[0]):
+        # change from matlab seg = find(seg_end >= i,1); # TODO seg_end = seg_end -1?
+        seg = np.argwhere(seg_end > i)
+        color = np.full((1, 3), col[seg[0]]
+                        ) if seg.size else np.full((1, 3), col[0])
+        RotMat = np.reshape(np.array(g[i, 0:3], g[i, 4:7], g[i, 8:11]), (3, 3))
+        normal = RotMat[:, 2]  # TODO check if need .T
+        pos = g[i, 12:15].T - RotMat @ np.array([0, 0, r_height]).T
+
+        theta = np.arange(0, 2 * np.pi, 0.05)
+        # TODO null space
+
+
+def sphere(N=20):
+    # https://stackoverflow.com/questions/51645694/how-to-plot-a-perfectly-smooth-sphere
+    u = np.linspace(-np.pi, np.pi, N + 1)
+    v = np.linspace(0, np.pi, N + 1)
+    x = np.outer(np.cos(u), np.sin(v))
+    y = np.outer(np.sin(u), np.sin(v))
+    z = np.outer(np.ones(np.size(u)), np.cos(v))
+    return x, y, z
